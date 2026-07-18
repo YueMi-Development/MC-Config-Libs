@@ -101,7 +101,11 @@ public final class ConfigManager {
      * @param plugin the plugin instance to operate on
      */
     public void loadAndMigrate(JavaPlugin plugin) {
-        plugin.saveDefaultConfig();
+        try {
+            plugin.saveDefaultConfig();
+        } catch (Exception e) {
+            logger.warning("Failed to save default config: " + e.getMessage());
+        }
         File configFile = new File(plugin.getDataFolder(), "config.yml");
         YamlConfiguration config = YamlConfiguration.loadConfiguration(configFile);
         int current = config.getInt("config-version", 1);
