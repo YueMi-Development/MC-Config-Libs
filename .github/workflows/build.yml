@@ -28,11 +28,46 @@ jobs:
         run: ./gradlew clean build -x test --no-daemon
 
       - name: Run unit tests
+        id: test
         run: ./gradlew :config-api:test --no-daemon
 
-      - name: Upload test report
+      # Primary: Display in PR/workflow
+      - name: Publish Test Results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: JUnit Test Results
+          path: '**/build/test-results/test/*.xml'
+          reporter: 'java-junit'
+          fail-on-error: false
+
+      # Secondary: Generate HTML report link
+      - name: Generate Test Report Summary
+        if: always()
+        run: |
+          echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -d "config-api/build/reports/tests/test" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "[View Detailed HTML Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Artifact: \`test-report\`" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      # Upload detailed HTML report
+      - name: Upload test report artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-report
           path: config-api/build/reports/tests/test/
+          retention-days: 30
+
+      # Optional: Fail if tests failed
+      - name: Check test results
+        if: failure() && steps.test.outcome == 'failure'
+        run: |
+          echo "Tests failed! Check the Test Results tab above."
+          exit 1
