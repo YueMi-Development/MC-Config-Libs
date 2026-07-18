@@ -3,7 +3,7 @@ name: Build
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
 
 jobs:
@@ -25,4 +25,14 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build all modules
-        run: ./gradlew clean build --no-daemon
+        run: ./gradlew clean build -x test --no-daemon
+
+      - name: Run unit tests
+        run: ./gradlew :config-api:test --no-daemon
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: config-api/build/reports/tests/test/

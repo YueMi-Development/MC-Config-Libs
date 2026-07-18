@@ -25,6 +25,9 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
+      - name: Run unit tests
+        run: ./gradlew :config-api:test --no-daemon
+
       - name: Publish to Maven repository
         env:
           MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
