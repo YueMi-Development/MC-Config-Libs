@@ -24,11 +24,11 @@ publishing {
     publications {
         create<MavenPublication>("maven") {
             from(components["java"])
-            artifactId = "mc-config-api"
+            artifactId = "mc-config-libs"
             pom {
-                name.set("MC Config API")
+                name.set("MC Config Libs")
                 description.set("Reusable configuration migration library for Paper plugins")
-                url.set("https://github.com/YueMi-Development/mc-config-api")
+                url.set("https://github.com/YueMi-Development/MC-Config-Libs")
                 licenses {
                     license {
                         name.set("MIT License")
