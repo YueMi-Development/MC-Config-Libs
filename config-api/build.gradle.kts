@@ -17,9 +17,11 @@ repositories {
     maven { url = uri("https://jitpack.io") }
 }
 
+val paperApiVersion: String by project
+
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:1.21.6-R0.1-SNAPSHOT")
-    testImplementation("io.papermc.paper:paper-api:1.21.6-R0.1-SNAPSHOT")
+    compileOnly("io.papermc.paper:paper-api:$paperApiVersion")
+    testImplementation("io.papermc.paper:paper-api:$paperApiVersion")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
     testImplementation("org.mockito:mockito-core:5.12.0")
     testImplementation("com.github.seeseemelk:MockBukkit-v1.21:3.133.0")
