@@ -34,6 +34,15 @@ public final class ConfigManager {
     public ConfigManager(JavaPlugin plugin, String scanPackage) {
         this.logger = plugin.getLogger();
         this.steps.addAll(discoverSteps(plugin, scanPackage));
+        
+        Set<Integer> versions = new HashSet<>();
+        for (MigrationStep step : steps) {
+            int version = step.getTargetVersion();
+            if (!versions.add(version)) {
+                throw new IllegalStateException("Duplicate migration step detected for version " + version);
+            }
+        }
+
         int max = 1;
         for (MigrationStep step : steps) {
             if (step.getTargetVersion() > max) {
@@ -48,7 +57,32 @@ public final class ConfigManager {
         List<MigrationStep> found = new ArrayList<>();
         String path = scanPackage.replace('.', '/');
         try {
-            URI uri = plugin.getClass().getProtectionDomain().getCodeSource().getLocation().toURI();
+            java.net.URL resource = plugin.getClass().getClassLoader().getResource(path);
+            if (resource != null && resource.getProtocol().equals("file")) {
+                File pkgDir = new File(resource.toURI());
+                if (pkgDir.isDirectory()) {
+                    File[] files = pkgDir.listFiles();
+                    if (files != null) {
+                        for (File file : files) {
+                            if (file.getName().endsWith(".class") && !file.getName().contains("$")) {
+                                String className = scanPackage + "." + file.getName().substring(0, file.getName().length() - 6);
+                                tryLoadStep(plugin, className, found);
+                            }
+                        }
+                    }
+                    return found;
+                }
+            }
+
+            java.net.URL location = plugin.getClass().getProtectionDomain().getCodeSource().getLocation();
+            if (location == null) {
+                location = ConfigManager.class.getProtectionDomain().getCodeSource().getLocation();
+            }
+            if (location == null) {
+                logger.warning("Code source location is null, cannot scan for migration steps");
+                return found;
+            }
+            URI uri = location.toURI();
             File src = new File(uri);
             if (src.isDirectory()) {
                 File pkgDir = new File(src, path);
@@ -108,11 +142,28 @@ public final class ConfigManager {
         }
         File configFile = new File(plugin.getDataFolder(), "config.yml");
         YamlConfiguration config = YamlConfiguration.loadConfiguration(configFile);
-        int current = config.getInt("config-version", 1);
+        
+        int current;
+        boolean modified = false;
+        if (!config.contains("config-version") || config.get("config-version") == null) {
+            current = 0;
+            config.set("config-version", 0);
+            modified = true;
+        } else {
+            current = config.getInt("config-version");
+        }
+
         if (current >= latestVersion) {
+            if (modified) {
+                try {
+                    config.save(configFile);
+                } catch (Exception e) {
+                    logger.severe("Failed to save migrated configuration: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
             return;
         }
-        boolean modified = false;
         for (MigrationStep step : steps) {
             if (current == step.getTargetVersion() - 1) {
                 int old = current;

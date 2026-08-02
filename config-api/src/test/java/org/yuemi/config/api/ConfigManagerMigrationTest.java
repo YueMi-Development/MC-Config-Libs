@@ -8,8 +8,10 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import java.io.File;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ConfigManagerMigrationTest {
 
@@ -58,5 +60,46 @@ public class ConfigManagerMigrationTest {
         // Verify that the migration applied the expected key and updated version
         assertEquals("test-value", config.getString("test-key"), "Migration should set test-key");
         assertEquals(2, config.getInt("config-version"), "Config version should be updated to migration target");
+    }
+
+    @Test
+    public void testDuplicateMigrationStepThrows() {
+        assertThrows(IllegalStateException.class, () -> {
+            new ConfigManager(plugin, "org.yuemi.config.api.testmigrations.duplicate");
+        });
+    }
+
+    @Test
+    public void testMissingConfigVersionDefaultsToZero() throws Exception {
+        // Write empty config to file location to simulate missing key
+        File configFile = new File(plugin.getDataFolder(), "config.yml");
+        plugin.getDataFolder().mkdirs();
+        YamlConfiguration config = new YamlConfiguration();
+        config.save(configFile);
+
+        ConfigManager manager = new ConfigManager(plugin, "org.yuemi.config.api.testmigrations.valid");
+        manager.loadAndMigrate(plugin);
+
+        // Load the migrated config and check
+        YamlConfiguration migratedConfig = YamlConfiguration.loadConfiguration(configFile);
+        assertEquals(1, migratedConfig.getInt("config-version"));
+        assertEquals("migrated-value", migratedConfig.getString("migrated-key"));
+    }
+
+    @Test
+    public void testNullConfigVersionDefaultsToZero() throws Exception {
+        File configFile = new File(plugin.getDataFolder(), "config.yml");
+        plugin.getDataFolder().mkdirs();
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("config-version", null);
+        config.save(configFile);
+
+        ConfigManager manager = new ConfigManager(plugin, "org.yuemi.config.api.testmigrations.valid");
+        manager.loadAndMigrate(plugin);
+
+        // Load the migrated config and check
+        YamlConfiguration migratedConfig = YamlConfiguration.loadConfiguration(configFile);
+        assertEquals(1, migratedConfig.getInt("config-version"));
+        assertEquals("migrated-value", migratedConfig.getString("migrated-key"));
     }
 }
